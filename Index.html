@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>나만의 공식 암기 모음집</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Noto Sans KR -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- MathJax (LaTeX 수학 수식 렌더링 지원) -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+      background-color: #f8fafc;
+    }
+    /* 카드 뒤집기 및 블러 효과 */
+    .formula-blur {
+      filter: blur(8px);
+      user-select: none;
+      transition: filter 0.3s ease;
+    }
+    .formula-reveal {
+      filter: blur(0);
+      transition: filter 0.3s ease;
+    }
+    /* 커스텀 스크롤바 */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- 상단 네비게이션 바 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-sm">
+          <i data-lucide="book-open-check" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">공식 암기 모음집</h1>
+          <p class="text-xs text-slate-500 hidden sm:block">Google Sheets 실시간 연동</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- 암기 모드(가리기) 토글 버튼 -->
+        <button id="toggleStudyModeBtn" onclick="toggleStudyMode()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition">
+          <i data-lucide="eye-off" id="studyModeIcon" class="w-4 h-4 text-indigo-600"></i>
+          <span id="studyModeText">암기 모드 OFF</span>
+        </button>
+
+        <!-- 새 공식 추가 버튼 -->
+        <button onclick="openModal()" class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>공식 추가</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 메인 콘텐츠 영역 -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <!-- 진행률 대시보드 -->
+    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">나의 암기 달성률</h2>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span id="progressPercent" class="text-3xl font-bold text-indigo-600">0%</span>
+            <span id="progressCount" class="text-sm text-slate-500">(0 / 0개 완료)</span>
+          </div>
+        </div>
+        
+        <!-- 필터 및 검색 -->
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="categoryFilter" onchange="renderCards()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">전체 분류</option>
+          </select>
+          
+          <select id="statusFilter" onchange="renderCards()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">전체 상태</option>
+            <option value="UNMEMORIZED">미완료만 보기</option>
+            <option value="MEMORIZED">암기 완료만 보기</option>
+          </select>
+
+          <div class="relative flex-1 sm:w-48">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input type="text" id="searchInput" oninput="renderCards()" placeholder="공식 검색..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- 프로그레스 바 -->
+      <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+        <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- 로딩 스피너 -->
+    <div id="loadingState" class="flex flex-col items-center justify-center py-20 text-slate-500">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-3"></div>
+      <p class="text-sm font-medium">스프레드시트에서 공식을 불러오는 중입니다...</p>
+    </div>
+
+    <!-- 빈 상태 안내 -->
+    <div id="emptyState" class="hidden flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 text-center px-4">
+      <div class="bg-indigo-50 text-indigo-600 p-3 rounded-full mb-3">
+        <i data-lucide="file-question" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-base font-semibold text-slate-800">표시할 공식이 없습니다</h3>
+      <p class="text-sm text-slate-500 mt-1 mb-4">우측 상단의 '공식 추가' 버튼을 눌러 외울 공식을 등록해보세요!</p>
+      <button onclick="openModal()" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition">
+        첫 공식 등록하기
+      </button>
+    </div>
+
+    <!-- 공식 카드 그리드 -->
+    <div id="formulaGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- 자바스크립트로 카드 동적 생성 -->
+    </div>
+
+  </main>
+
+  <!-- 새 공식 추가 모달 -->
+  <div id="addModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 transform transition-all">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-lg font-bold text-slate-900">새 공식 추가하기</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="formulaForm" onsubmit="handleFormSubmit(event)" class="mt-4 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">과목 / 분류 *</label>
+            <input type="text" id="inputCategory" required placeholder="예: 수학, 물리, 엑셀, 영어" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">공식 이름 *</label>
+            <input type="text" id="inputTitle" required placeholder="예: 피타고라스의 정리" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-slate-700">공식 내용 (LaTeX 수식 지원) *</label>
+            <span class="text-[11px] text-indigo-600 font-medium">수식은 $$...$$ 로 감싸세요</span>
+          </div>
+          <textarea id="inputFormula" required rows="3" placeholder="예: $$a^2 + b^2 = c^2$$ 또는 일반 텍스트" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">설명 및 암기 팁</label>
+          <textarea id="inputDescription" rows="2" placeholder="공식의 의미, 조건, 외우는 팁 등을 자유롭게 적어주세요." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">취소</button>
+          <button type="submit" id="submitBtn" class="px-5 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition flex items-center gap-2">
+            <span>시트에 저장</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 커스텀 알림 토스트 (alert 대신 사용) -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div id="toastContent" class="bg-slate-800 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2">
+      <span id="toastMessage">메시지</span>
+    </div>
+  </div>
+
+  <!-- 삭제 확인 모달 (confirm 대신 사용) -->
+  <div id="deleteConfirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl">
+      <h3 class="text-base font-bold text-slate-900">공식 삭제</h3>
+      <p class="text-sm text-slate-600 mt-2">이 공식을 스프레드시트에서 완전히 삭제하시겠습니까?</p>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">취소</button>
+        <button id="confirmDeleteBtn" class="px-4 py-2 text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white rounded-xl">삭제하기</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 전역 상태 관리
+    let allFormulas = [];
+    let isStudyMode = false;
+    let deleteTargetId = null;
+
+    // Google Apps Script 환경 여부 확인
+    const isGasEnvironment = typeof google !== 'undefined' && google.script && google.script.run;
+
+    // 미리보기(로컬) 환경용 샘플 데이터
+    const MOCK_DATA = [
+      {
+        id: 'mock-1',
+        category: '수학',
+        title: '근의 공식 (미리보기 샘플)',
+        formula: '$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$',
+        description: '이차방정식 ax² + bx + c = 0 (a ≠ 0)의 해를 구하는 공식 (Apps Script 배포 시 실제 시트와 연동됩니다)',
+        memorized: false
+      },
+      {
+        id: 'mock-2',
+        category: '물리',
+        title: '운동 에너지 공식',
+        formula: '$$E_k = \\frac{1}{2}mv^2$$',
+        description: '질량이 m인 물체가 속도 v로 움직일 때 가지는 운동 에너지',
+        memorized: true
+      }
+    ];
+
+    // 로컬 스토리지 헬퍼 (미리보기 환경용)
+    function getLocalFormulas() {
+      const saved = localStorage.getItem('mock_formulas');
+      if (!saved) {
+        localStorage.setItem('mock_formulas', JSON.stringify(MOCK_DATA));
+        return [...MOCK_DATA];
+      }
+      return JSON.parse(saved);
+    }
+
+    function saveLocalFormulas(data) {
+      localStorage.setItem('mock_formulas', JSON.stringify(data));
+    }
+
+    // 초기화
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      loadFormulas();
+    });
+
+    // 토스트 메시지 표시 함수
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      const content = document.getElementById('toastContent');
+      const msgEl = document.getElementById('toastMessage');
+      
+      msgEl.textContent = message;
+      content.className = isError 
+        ? 'bg-rose-600 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2'
+        : 'bg-slate-800 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2';
+        
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    // 서버(Google Sheets)에서 데이터 불러오기
+    function loadFormulas() {
+      document.getElementById('loadingState').classList.remove('hidden');
+      document.getElementById('formulaGrid').classList.add('hidden');
+      document.getElementById('emptyState').classList.add('hidden');
+
+      if (!isGasEnvironment) {
+        // 일반 브라우저 / 미리보기 환경일 경우 로컬 데이터 사용
+        setTimeout(() => {
+          allFormulas = getLocalFormulas();
+          updateCategoryFilter();
+          updateProgress();
+          renderCards();
+          document.getElementById('loadingState').classList.add('hidden');
+          showToast('미리보기 모드로 실행 중입니다. (임시 데이터 사용)');
+        }, 300);
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler((data) => {
+          allFormulas = data || [];
+          updateCategoryFilter();
+          updateProgress();
+          renderCards();
+          document.getElementById('loadingState').classList.add('hidden');
+        })
+        .withFailureHandler((err) => {
+          document.getElementById('loadingState').classList.add('hidden');
+          showToast(err.message || '데이터 로드 실패', true);
+        })
+        .getFormulas();
+    }
+
+    // 분류 필터 옵션 업데이트
+    function updateCategoryFilter() {
+      const filterEl = document.getElementById('categoryFilter');
+      const currentVal = filterEl.value;
+      const categories = [...new Set(allFormulas.map(f => f.category))].filter(Boolean);
+      
+      filterEl.innerHTML = '<option value="ALL">전체 분류</option>';
+      categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        filterEl.appendChild(option);
+      });
+      
+      if (categories.includes(currentVal)) {
+        filterEl.value = currentVal;
+      }
+    }
+
+    // 상단 진행률 업데이트
+    function updateProgress() {
+      const total = allFormulas.length;
+      const completed = allFormulas.filter(f => f.memorized).length;
+      const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+      document.getElementById('progressPercent').textContent = `${percent}%`;
+      document.getElementById('progressCount').textContent = `(${completed} / ${total}개 완료)`;
+      document.getElementById('progressBar').style.width = `${percent}%`;
+    }
+
+    // 암기 모드(블러 처리) 토글
+    function toggleStudyMode() {
+      isStudyMode = !isStudyMode;
+      const btnText = document.getElementById('studyModeText');
+      const btnIcon = document.getElementById('studyModeIcon');
+      
+      if (isStudyMode) {
+        btnText.textContent = '암기 모드 ON';
+        btnIcon.setAttribute('data-lucide', 'eye');
+        showToast('암기 모드 활성화: 카드를 클릭하면 공식이 보입니다.');
+      } else {
+        btnText.textContent = '암기 모드 OFF';
+        btnIcon.setAttribute('data-lucide', 'eye-off');
+      }
+      lucide.createIcons();
+      renderCards();
+    }
+
+    // 카드 목록 렌더링
+    function renderCards() {
+      const grid = document.getElementById('formulaGrid');
+      const emptyState = document.getElementById('emptyState');
+      
+      const catFilter = document.getElementById('categoryFilter').value;
+      const statusFilter = document.getElementById('statusFilter').value;
+      const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+
+      const filtered = allFormulas.filter(item => {
+        const matchCat = catFilter === 'ALL' || item.category === catFilter;
+        const matchStatus = statusFilter === 'ALL' || 
+                            (statusFilter === 'MEMORIZED' && item.memorized) || 
+                            (statusFilter === 'UNMEMORIZED' && !item.memorized);
+        const matchKeyword = !keyword || 
+                             item.title.toLowerCase().includes(keyword) || 
+                             item.formula.toLowerCase().includes(keyword) || 
+                             item.description.toLowerCase().includes(keyword);
+        return matchCat && matchStatus && matchKeyword;
+      });
+
+      grid.innerHTML = '';
+
+      if (filtered.length === 0) {
+        grid.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      emptyState.classList.remove('flex');
+      grid.classList.remove('hidden');
+
+      filtered.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `bg-white rounded-2xl border transition-all duration-200 flex flex-col justify-between p-5 shadow-sm hover:shadow-md ${
+          item.memorized ? 'border-emerald-200 bg-emerald-50/20' : 'border-slate-200'
+        }`;
+
+        const blurClass = isStudyMode ? 'formula-blur cursor-pointer' : 'formula-reveal';
+
+        card.innerHTML = `
+          <div>
+            <!-- 카드 상단: 카테고리 뱃지 & 삭제 버튼 -->
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <span class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700">
+                ${escapeHtml(item.category)}
+              </span>
+              <button onclick="openDeleteModal('${item.id}')" title="삭제" class="text-slate-400 hover:text-rose-600 p-1 rounded-lg transition">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- 공식 제목 -->
+            <h3 class="text-base font-bold text-slate-900 mb-3">${escapeHtml(item.title)}</h3>
+
+            <!-- 공식 본문 영역 (암기 모드 시 블러 적용 및 클릭 시 해제) -->
+            <div onclick="this.classList.toggle('formula-blur')" class="bg-slate-50 border border-slate-200/80 rounded-xl p-4 mb-3 overflow-x-auto text-center min-h-[76px] flex items-center justify-center ${blurClass}">
+              <div class="text-slate-800 font-medium text-base w-full">
+                ${escapeHtml(item.formula)}
+              </div>
+            </div>
+
+            <!-- 설명 및 팁 -->
+            ${item.description ? `<p class="text-xs text-slate-600 leading-relaxed mb-4">${escapeHtml(item.description)}</p>` : ''}
+          </div>
+
+          <!-- 카드 하단: 암기 완료 체크 버튼 -->
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs font-medium ${item.memorized ? 'text-emerald-600' : 'text-slate-400'}">
+              ${item.memorized ? '암기 완료됨' : '학습 중'}
+            </span>
+            <button onclick="toggleMemorized('${item.id}', ${!item.memorized})" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+              item.memorized 
+                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
+                : 'bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'
+            }">
+              <i data-lucide="${item.memorized ? 'check-circle-2' : 'circle'}" class="w-4 h-4"></i>
+              <span>${item.memorized ? '완료 취소' : '외웠어요'}</span>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      lucide.createIcons();
+      // MathJax 수식 다시 렌더링
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([grid]).catch((err) => console.error(err));
+      }
+    }
+
+    // 암기 상태 변경 처리
+    function toggleMemorized(id, newStatus) {
+      // UI 즉시 반영 (Optimistic UI)
+      const target = allFormulas.find(f => f.id === id);
+      if (target) {
+        target.memorized = newStatus;
+        updateProgress();
+        renderCards();
+      }
+
+      if (!isGasEnvironment) {
+        saveLocalFormulas(allFormulas);
+        showToast(newStatus ? '암기 완료로 표시되었습니다! (미리보기)' : '학습 중으로 변경되었습니다.');
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(() => {
+          showToast(newStatus ? '암기 완료로 표시되었습니다!' : '학습 중으로 변경되었습니다.');
+        })
+        .withFailureHandler((err) => {
+          // 실패 시 롤백
+          if (target) target.memorized = !newStatus;
+          updateProgress();
+          renderCards();
+          showToast('상태 저장 실패: ' + err.message, true);
+        })
+        .toggleMemorizedStatus(id, newStatus);
+    }
+
+    // 모달 제어
+    function openModal() {
+      document.getElementById('formulaForm').reset();
+      document.getElementById('addModal').classList.remove('hidden');
+      document.getElementById('addModal').classList.add('flex');
+    }
+
+    function closeModal() {
+      document.getElementById('addModal').classList.add('hidden');
+      document.getElementById('addModal').classList.remove('flex');
+    }
+
+    // 새 공식 저장 폼 제출
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>저장 중...</span>';
+
+      const newFormula = {
+        category: document.getElementById('inputCategory').value.trim(),
+        title: document.getElementById('inputTitle').value.trim(),
+        formula: document.getElementById('inputFormula').value.trim(),
+        description: document.getElementById('inputDescription').value.trim()
+      };
+
+      if (!isGasEnvironment) {
+        const localData = getLocalFormulas();
+        localData.push({
+          id: 'mock-' + Date.now(),
+          ...newFormula,
+          memorized: false
+        });
+        saveLocalFormulas(localData);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>시트에 저장</span>';
+        closeModal();
+        showToast('새 공식이 추가되었습니다! (미리보기 모드)');
+        loadFormulas();
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>시트에 저장</span>';
+          closeModal();
+          showToast('새 공식이 스프레드시트에 추가되었습니다!');
+          loadFormulas(); // 최신 목록 다시 불러오기
+        })
+        .withFailureHandler((err) => {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>시트에 저장</span>';
+          showToast(err.message || '저장 실패', true);
+        })
+        .addFormula(newFormula);
+    }
+
+    // 삭제 확인 모달 제어
+    function openDeleteModal(id) {
+      deleteTargetId = id;
+      const modal = document.getElementById('deleteConfirmModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      
+      document.getElementById('confirmDeleteBtn').onclick = () => {
+        executeDelete(deleteTargetId);
+      };
+    }
+
+    function closeDeleteModal() {
+      deleteTargetId = null;
+      const modal = document.getElementById('deleteConfirmModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function executeDelete(id) {
+      closeDeleteModal();
+      showToast('삭제 중입니다...');
+
+      if (!isGasEnvironment) {
+        allFormulas = allFormulas.filter(f => f.id !== id);
+        saveLocalFormulas(allFormulas);
+        updateCategoryFilter();
+        updateProgress();
+        renderCards();
+        showToast('공식이 삭제되었습니다. (미리보기 모드)');
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(() => {
+          allFormulas = allFormulas.filter(f => f.id !== id);
+          updateCategoryFilter();
+          updateProgress();
+          renderCards();
+          showToast('공식이 삭제되었습니다.');
+        })
+        .withFailureHandler((err) => {
+          showToast('삭제 실패: ' + err.message, true);
+        })
+        .deleteFormula(id);
+    }
+
+    // XSS 방지용 HTML 이스케이프
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
